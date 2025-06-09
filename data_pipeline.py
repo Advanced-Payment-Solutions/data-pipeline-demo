@@ -52,45 +52,47 @@ def download_and_upload_attachments(XML_PATH):
         query = f'after:{fileprocessdate} filename:csv has:attachment subject:"Dealer Transactions Report"'
         results = service.users().messages().list(userId='me', q=query).execute()
         messages = results.get('messages', [])
-        exists = check_row_exists(
-        supabase_url=SUPABASE_URL,
-        supabase_key=SUPABASE_KEY,
-        table_name="TransactionLog",
-        column_name="filedate",
-        value=fileprocessdate
-        )
-        if exists:
-            print("Row already exists duplicate excution for the same date")
-        else: 
-         print("Row does not exist for the date of " + fileprocessdate)
-         removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)        
-         for message in messages:
+        removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)        
+        for message in messages:
                                 msg = service.users().messages().get(userId='me', id=message['id']).execute()
                                 for part in msg['payload'].get('parts', []):
                                  filename = part.get("filename") 
-                                 body = part.get("body", {})
-                                 if filename and 'attachmentId' in body:
-                                    insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog')
-                                    att_id = body['attachmentId']
-                                    attachment = service.users().messages().attachments().get(userId='me', messageId=message['id'], id=att_id).execute()
-                                    data = base64.urlsafe_b64decode(attachment['data'].encode('UTF-8')) 
-                                    upload_file_to_supabase(data,'Data/'+filename,BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)                                     
-                                    df = load_csv_from_supabase("apsbucket", 'Data/'+filename, SUPABASE_URL, SUPABASE_KEY)
-                                    num_rows = len(df)
-                                    print(num_rows)
-                                    if df is not None: 
-                                        #send_test_email('GCP Service execution started for the '+ filename + ' with rows of ' + str(num_rows))
-                                        push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NAME)
-                                        removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
-                                        #send_test_email('GCP Service execution completed for the '+ filename + ' with rows of ' +str(num_rows))
-                                    else:
-                                        print("Failed to load CSV from Supabase.")
+                                 body = part.get("body", {})                                 
+                                 exists = check_row_exists(supabase_url=SUPABASE_URL,supabase_key=SUPABASE_KEY,table_name="TransactionLog", date_column="filedate",date_value=fileprocessdate,filename_column="filename",filename_value=filename)
+                                 if exists:
+                                    print("Row already exists duplicate excution for the same date")
+                                 else: 
+                                    print("Row does not exist for the date of " + fileprocessdate)
+                                    if filename and 'attachmentId' in body:
+                                        insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog')
+                                        att_id = body['attachmentId']
+                                        attachment = service.users().messages().attachments().get(userId='me', messageId=message['id'], id=att_id).execute()
+                                        data = base64.urlsafe_b64decode(attachment['data'].encode('UTF-8')) 
+                                        upload_file_to_supabase(data,'Data/'+filename,BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)                                     
+                                        df = load_csv_from_supabase("apsbucket", 'Data/'+filename, SUPABASE_URL, SUPABASE_KEY)
+                                        num_rows = len(df)
+                                        print(num_rows)
+                                        if df is not None: 
+                                            send_test_email('GCP Service execution started for the '+ filename + ' with rows of ' + str(num_rows))
+                                            push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NAME)
+                                            removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
+                                            send_test_email('GCP Service execution completed for the '+ filename + ' with rows of ' +str(num_rows))
+                                        else:
+                                            print("Failed to load CSV from Supabase.")
 
-def check_row_exists(supabase_url: str, supabase_key: str, table_name: str, column_name: str, value):
+def check_row_exists(supabase_url: str, supabase_key: str, table_name: str,  date_column: str, date_value: str,filename_column: str,filename_value: str):
     supabase: Client = create_client(supabase_url, supabase_key)
 
     try:
-        response = supabase.table(table_name).select("*").eq(column_name, value).limit(1).execute()
+        #response = supabase.table(table_name).select("*").eq(column_name, value).limit(1).execute()
+        response = (
+            supabase.table(table_name)
+            .select("*")
+            .eq(date_column, date_value)
+            .eq(filename_column, filename_value)
+            .limit(1)
+            .execute()
+        )
         print(response) 
 
         # ✅ This checks if at least one row was returned
