@@ -46,8 +46,9 @@ def download_and_upload_attachments(XML_PATH):
         json.dump(token_data, tmp)
         tmp.flush()
         service = authenticate_gmail(tmp.name) 
-        today = datetime.today().strftime('%Y/%m/%d')        
-        fileprocessdate=today
+        #today = datetime.today().strftime('%Y/%m/%d')    
+        yesterday = (datetime.today() - timedelta(days=2)).strftime('%Y/%m/%d')    
+        fileprocessdate=yesterday
         query = f'after:{fileprocessdate} filename:csv has:attachment subject:"Dealer Transactions Report"'
         results = service.users().messages().list(userId='me', q=query).execute()
         messages = results.get('messages', [])
@@ -78,10 +79,10 @@ def download_and_upload_attachments(XML_PATH):
                                     num_rows = len(df)
                                     print(num_rows)
                                     if df is not None: 
-                                        send_test_email('GCP Service execution started for the '+ filename + ' with rows of ' + str(num_rows))
+                                        #send_test_email('GCP Service execution started for the '+ filename + ' with rows of ' + str(num_rows))
                                         push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NAME)
                                         removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
-                                        send_test_email('GCP Service execution completed for the '+ filename + ' with rows of ' +str(num_rows))
+                                        #send_test_email('GCP Service execution completed for the '+ filename + ' with rows of ' +str(num_rows))
                                     else:
                                         print("Failed to load CSV from Supabase.")
 
@@ -231,6 +232,7 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
     # List all column names in the April DataFrame
     print("Column names in April DataFrame:")
     print(df_filtered.columns.tolist())
+    df_filtered =process_transaction_datetime(df_filtered)
 
     # %%
     columns_to_clean = ['Amount', 'TotalAmount', 'Surcharge', 'MSF', 'Tip', 'Cashout', 
@@ -239,6 +241,8 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
     df_filtered[columns_to_clean] = (df_filtered[columns_to_clean]
                                     .replace(r'[\$,]', '', regex=True)
                                     .astype(float))
+    
+    #df_filtered = process_transaction_datetime(df_filtered)
 
     # %%
     # Find rows where Amount, Surcharge, and TotalAmount are null/NaN
@@ -473,7 +477,78 @@ def send_test_email(request):
         message_text=body
     )
     send_email(service, 'me', message)
+def convert_datetime_robust_main(dt_str):
+    # Handle NaN or missing values
+    if pd.isna(dt_str) or str(dt_str).lower() == 'nan':
+        return pd.NaT
 
+    dt_str = str(dt_str).strip()
+
+    # Try common date formats
+    formats_to_try = [
+        '%d/%m/%Y %H:%M',  # 30/04/2025 19:36
+        '%d/%m/%y %H:%M',  # 12/4/25 20:46
+        '%d/%m/%Y %H:%M',  # 30/04/2025 9:57
+        '%d/%m/%y %H:%M',  # 12/4/25 8:54
+        '%d/%m/%y %H:%M',  # 9/4/25 9:56
+    ]
+
+    for fmt in formats_to_try:
+        try:
+            dt = pd.to_datetime(dt_str, format=fmt)
+            return dt.strftime('%Y-%m-%d')
+        except Exception:
+            continue
+
+    # If all formats fail, try auto-detection with dayfirst
+    try:
+        return pd.to_datetime(dt_str, dayfirst=True)
+    except Exception:
+        return pd.NaT
+
+# Assuming df_filtered is your DataFrame with 'TransactionDatetime' column
+def process_transaction_datetime(df_filtered):
+    print("Updating TransactionDatetime in df_filtered...")
+    print(f"Original data type: {df_filtered['TransactionDatetime'].dtype}")
+    print("Sample original values:")
+    print(df_filtered['TransactionDatetime'].head(5))
+
+    # Step 1: Convert to datetime
+    df_filtered['TransactionDatetime'] = df_filtered['TransactionDatetime'].apply(convert_datetime_robust_main)
+
+    print(f"\nAfter datetime conversion:")
+    print(f"Data type: {df_filtered['TransactionDatetime'].dtype}")
+    print("Sample datetime values:")
+    print(df_filtered['TransactionDatetime'].head(5))
+
+    # Step 2: Convert to date only (remove timestamp)
+    df_filtered['TransactionDatetime'] = df_filtered['TransactionDatetime'].dt.date
+
+    print(f"\nAfter converting to date (timestamp removed):")
+    print(f"Data type: {df_filtered['TransactionDatetime'].dtype}")
+    print("Sample date values:")
+    print(df_filtered['TransactionDatetime'].head(10))
+
+    # Check conversion results
+    conversion_success = df_filtered['TransactionDatetime'].notna().sum()
+    conversion_failed = df_filtered['TransactionDatetime'].isna().sum()
+
+    print(f"\nConversion summary:")
+    print(f"Successfully converted: {conversion_success}")
+    print(f"Failed conversions: {conversion_failed}")
+    print(f"Total rows: {len(df_filtered)}")
+
+    # Show date range
+    if conversion_success > 0:
+        print(f"\nDate range:")
+        print(f"From: {df_filtered['TransactionDatetime'].min()}")
+        print(f"To: {df_filtered['TransactionDatetime'].max()}")
+
+    # Show final result
+    print(f"\nFinal TransactionDatetime column format:")
+    print(df_filtered['TransactionDatetime'].head(10))
+
+    return df_filtered
 
  
 if __name__ == "__main__":
