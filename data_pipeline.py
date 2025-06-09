@@ -27,7 +27,7 @@ BUCKET_NAME = "apsbucket"
 tables = {}  
 uploaded_files = []
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-ENV_TABLE_NAME='Dev_Transaction'
+ENV_TABLE_NAME='Dev_LivePayment_Transactions'
 
  
 def authenticate_gmail(GMAIL_TOKEN_PATH):
@@ -76,12 +76,12 @@ def download_and_upload_attachments(XML_PATH):
                                     upload_file_to_supabase(data,'Data/'+filename,BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)                                     
                                     df = load_csv_from_supabase("apsbucket", 'Data/'+filename, SUPABASE_URL, SUPABASE_KEY)
                                     num_rows = len(df)
-                                    #print(df)
+                                    print(num_rows)
                                     if df is not None: 
-                                        send_test_email('GCP Service execution started for the '+ filename + ' with rows of ' +num_rows)
+                                        send_test_email('GCP Service execution started for the '+ filename + ' with rows of ' + str(num_rows))
                                         push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NAME)
                                         removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
-                                        send_test_email('GCP Service execution completed for the '+ filename + ' with rows of ' +num_rows)
+                                        send_test_email('GCP Service execution completed for the '+ filename + ' with rows of ' +str(num_rows))
                                     else:
                                         print("Failed to load CSV from Supabase.")
 
@@ -222,6 +222,8 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
     # %%
     #df = pd.read_csv(data_list)
     df=data_list
+    num_rows = len(df)
+    print('push_data_supabase_database row count is : '+str(num_rows))
     # %%
     df_filtered = df.copy()
 
