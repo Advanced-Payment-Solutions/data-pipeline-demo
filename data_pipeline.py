@@ -149,7 +149,7 @@ def load_json_from_supabase(bucket_name, file_path, supabase_url, supabase_key):
         print(f"Failed to parse JSON file '{file_path}': {e}")
         return None
 
-def load_csv_from_supabase(bucket_name: str, file_path: str, supabase_url: str, supabase_key: str) -> pd.DataFrame | None:
+def load_csv_from_supabase(bucket_name: str, file_path: str, supabase_url: str, supabase_key: str):
  
     supabase = create_client(supabase_url, supabase_key)
     storage = supabase.storage.from_(bucket_name)
