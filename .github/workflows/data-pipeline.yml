@@ -1,38 +1,43 @@
 name: data-pipeline-workflow
 
 on: 
-  push: 
+  push:
   workflow_dispatch:
   schedule:
-       - cron: " * * * * "
+    - cron: "* * * * *"  # every minute (for testing; adjust as needed)
 
 jobs:
   run-data-pipeline:
-     runs-on: ubuntu-latest
-     steps:
-       - name: Checkout repo content
-         uses: actions/checkout@v4
-         with:
-           token: ${{ secrets.cd  }}
+    runs-on: ubuntu-latest
 
-       - name: Setup Python
-         uses: actions/setup-python@v5
-         with:
-            python-version: '3.9'
-            cache: 'pip' 
-       - name: Install dependencies
-         run: pip install -r requirements.txt
-       - name: Run data pipeline
-         env: 
-            
-         run: python data_pipeline.py
-       - name: Check for changes
-         id: git-check 
-         run:
-             git config user.name 'apspayments'
-             git config user.email 'aps@aps.business'
-             git add .
-             git diff --staged --quiet || echo "changes=true" >> $GITHUB_ENV
-       - name: Commit and push if changes
-         if: env.changes == 'true'
-         run
+    steps:
+      - name: Checkout repo content
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.cd }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run data pipeline
+        run: python data_pipeline.py
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          git config user.name 'apspayments'
+          git config user.email 'aps@aps.business'
+          git add .
+          git diff --staged --quiet || echo "changes=true" >> $GITHUB_ENV
+
+      - name: Commit and push if changes
+        if: env.changes == 'true'
+        run: |
+          git commit -m "Automated update from data pipeline"
+          git push
