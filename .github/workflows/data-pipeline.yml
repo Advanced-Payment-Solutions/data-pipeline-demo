@@ -4,7 +4,7 @@ on:
   push:
   workflow_dispatch:
   schedule:
-    - cron: "* * * * *"  # every minute (for testing; adjust as needed)
+    - cron: "* 18 * * *"  # every minute (for testing; adjust as needed)
 
 jobs:
   run-data-pipeline:
