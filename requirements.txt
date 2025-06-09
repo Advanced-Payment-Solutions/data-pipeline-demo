@@ -9,3 +9,4 @@ python-dotenv==1.0.1
 supabase==2.0.0
 functions-framework==3.5.0
 numpy==1.26.4
+tqdm==4.66.4
