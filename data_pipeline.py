@@ -46,9 +46,9 @@ def download_and_upload_attachments(XML_PATH):
         json.dump(token_data, tmp)
         tmp.flush()
         service = authenticate_gmail(tmp.name) 
-        #today = datetime.today().strftime('%Y/%m/%d')    
-        yesterday = (datetime.today() - timedelta(days=2)).strftime('%Y/%m/%d')    
-        fileprocessdate=yesterday
+        today = datetime.today().strftime('%Y/%m/%d')    
+        #yesterday = (datetime.today() - timedelta(days=2)).strftime('%Y/%m/%d')    
+        fileprocessdate=today
         query = f'after:{fileprocessdate} filename:csv has:attachment subject:"Dealer Transactions Report"'
         results = service.users().messages().list(userId='me', q=query).execute()
         messages = results.get('messages', [])
