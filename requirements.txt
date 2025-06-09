@@ -6,6 +6,6 @@ google-auth-httplib2==0.2.0
 google-api-python-client==2.126.0
 google-cloud-storage==2.16.0
 python-dotenv==1.0.1
-supabase-py==2.15.2
+supabase==2.0.0
 functions-framework==3.5.0
 numpy==1.26.4
