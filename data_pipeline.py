@@ -45,11 +45,7 @@ def download_and_upload_attachments(XML_PATH):
     with tempfile.NamedTemporaryFile(mode='w+', suffix='.json', delete=False) as tmp:
         json.dump(token_data, tmp)
         tmp.flush()
-        service = authenticate_gmail(tmp.name)
-        #service = authenticate_gmail(GMAIL_TOKEN_PATH) 
-        #query = f'after:{today} filename:csv has:attachment subject:"Dealer Transactions Report"'
-        #yesterday = (datetime.today() - timedelta(days=1)).strftime('%Y/%m/%d')
-        #print(yesterday)
+        service = authenticate_gmail(tmp.name) 
         today = datetime.today().strftime('%Y/%m/%d')        
         fileprocessdate=today
         query = f'after:{fileprocessdate} filename:csv has:attachment subject:"Dealer Transactions Report"'
@@ -77,15 +73,15 @@ def download_and_upload_attachments(XML_PATH):
                                     att_id = body['attachmentId']
                                     attachment = service.users().messages().attachments().get(userId='me', messageId=message['id'], id=att_id).execute()
                                     data = base64.urlsafe_b64decode(attachment['data'].encode('UTF-8')) 
-                                    upload_file_to_supabase(data,'Data/'+filename,BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)    
+                                    upload_file_to_supabase(data,'Data/'+filename,BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)                                     
                                     df = load_csv_from_supabase("apsbucket", 'Data/'+filename, SUPABASE_URL, SUPABASE_KEY)
-                                    print(df)
-                                    if df is not None:
-                                        print(df.head())                            
-                                        
-                                        send_test_email('test')
+                                    num_rows = len(df)
+                                    #print(df)
+                                    if df is not None: 
+                                        send_test_email('GCP Service execution started for the '+ filename + ' with rows of ' +num_rows)
                                         push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NAME)
                                         removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
+                                        send_test_email('GCP Service execution completed for the '+ filename + ' with rows of ' +num_rows)
                                     else:
                                         print("Failed to load CSV from Supabase.")
 
@@ -459,13 +455,13 @@ def send_email(service, user_id, message):
 
 def send_test_email(request):
     request_json = {
-            "to": "tkmsureshkumar@gmail.com",
+            "to": "tkmsureshkumar@gmail.com;alana@aps.business;gio@aps.business;aps@aps.business",
             "subject": "Cloud Function Test",
             "body": "This is a test email from GCP Cloud Function."
     }
     # request_json = request.get_json(silent=True)
-    recipient = request_json.get('to', 'tkmsureshkumar@gmail.com')
-    subject = request_json.get('subject', 'Test Email from Gmail API')
+    recipient = request_json.get('to', 'tkmsureshkumar@gmail.com;alana@aps.business;gio@aps.business;aps@aps.business')
+    subject = request_json.get('subject', )
     body = request_json.get('body', 'Hello from the Gmail API via Python!')
     service = gmail_authenticate()
     message = create_message(
@@ -479,6 +475,6 @@ def send_test_email(request):
 
  
 if __name__ == "__main__":
-    download_and_upload_attachments('te')
+    download_and_upload_attachments('test')
 
  
