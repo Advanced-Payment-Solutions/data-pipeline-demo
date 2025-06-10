@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Show current time
+        run: date
+        
       - name: Checkout repo content
         uses: actions/checkout@v4
         with:
