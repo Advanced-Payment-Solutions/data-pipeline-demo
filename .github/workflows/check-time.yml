@@ -1,0 +1,11 @@
+name: Check GitHub Timezone
+
+on:
+  workflow_dispatch:
+
+jobs:
+  print-time:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show current time
+        run: date
