@@ -16,18 +16,17 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 from supabase import create_client, Client
- 
+import xml.etree.ElementTree as ET
 
 SUPABASE_URL = "https://thxvfnachnpgmeottlem.supabase.co"
 SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoeHZmbmFjaG5wZ21lb3R0bGVtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Njg2ODQ1OSwiZXhwIjoyMDYyNDQ0NDU5fQ.TBgZdtH3INLZtpnraa4dfPbZ0hZHLdCoY1VKhqEv8FA'
 BUCKET_NAME = "apsbucket"
-
+FILE_PATH = "Configuration/config.xml"
 
 
 tables = {}  
 uploaded_files = []
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-ENV_TABLE_NAME='Dev_LivePayment_Transactions'
 
  
 def authenticate_gmail(GMAIL_TOKEN_PATH):
@@ -37,7 +36,9 @@ def authenticate_gmail(GMAIL_TOKEN_PATH):
 
 ######################################################################
 
-def download_and_upload_attachments(XML_PATH):
+def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subjectdata,message_text):
+
+ 
     token_data = load_json_from_supabase(BUCKET_NAME, 'Credentials/token.json', SUPABASE_URL, SUPABASE_KEY)
     if not token_data:
         print("Failed to load Gmail token from Supabase.")
@@ -73,12 +74,57 @@ def download_and_upload_attachments(XML_PATH):
                                         num_rows = len(df)
                                         print(num_rows)
                                         if df is not None: 
-                                            send_test_email('GCP Service execution started for the '+ filename + ' with rows of ' + str(num_rows))
-                                            push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NAME)
+                                            mailsubject = subjectdata +' started for the '+ filename + ' with rows of ' + str(num_rows)                                           
+                                            send_test_email(mailsubject,recipient,message_text)
+                                            push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
                                             removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
-                                            send_test_email('GCP Service execution completed for the '+ filename + ' with rows of ' +str(num_rows))
+                                            mailsubject = subjectdata +' started for the '+ filename + ' with rows of ' + str(num_rows)
+                                            send_test_email(mailsubject,recipient,message_text)
                                         else:
                                             print("Failed to load CSV from Supabase.")
+
+def load_xml_config_from_supabase(FILE_PATH):
+    try:
+        # Initialize Supabase client
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        storage = supabase.storage.from_(BUCKET_NAME)        
+        print(f"Attempting to download XML file: {FILE_PATH}")        
+        # Download file bytes
+        file_bytes = storage.download(FILE_PATH)        
+        # Decode bytes to string
+        xml_str = file_bytes.decode('utf-8')        
+        # Parse XML string
+        root = ET.fromstring(xml_str)        
+        # Extract values from XML
+        bucket_name = root.find('./supabase/bucketName').text
+        table_name = root.find('./supabase/tableName').text
+        sender = root.find('./mail/sender').text
+        to = root.find('./mail/to').text
+        subject = root.find('./mail/subject').text
+        message_text = root.find('./mail/message_text').text
+        ENV_TABLE_NAME = table_name    
+        recipient=to
+        subjectdata=subject
+        message_text=message_text
+        # Print extracted data
+        print("Bucket Name:", bucket_name)
+        print("Table Name:", ENV_TABLE_NAME)
+        print("Sender:", sender)
+        print("To:", recipient)
+        print("Subject:", subjectdata)
+        print("Message Text:", message_text)        
+        return {
+            "bucketName": bucket_name,
+            "tableName": table_name,
+            "sender": sender,
+            "to": to,
+            "subject": subject,
+            "message_text": message_text
+        }
+        
+    except Exception as e:
+        print("Error downloading or parsing the XML file:", e)
+        return None 
 
 def check_row_exists(supabase_url: str, supabase_key: str, table_name: str,  date_column: str, date_value: str,filename_column: str,filename_value: str):
     supabase: Client = create_client(supabase_url, supabase_key)
@@ -461,23 +507,9 @@ def send_email(service, user_id, message):
     print(f"Message sent! ID: {send_message['id']}")
 
 
-def send_test_email(request):
-    request_json = {
-            "to": "tkmsureshkumar@gmail.com;alana@aps.business;gio@aps.business;aps@aps.business",
-            "subject": "Cloud Function Test",
-            "body": "This is a test email from GCP Cloud Function."
-    }
-    # request_json = request.get_json(silent=True)
-    recipient = request_json.get('to', 'tkmsureshkumar@gmail.com;alana@aps.business;gio@aps.business;aps@aps.business')
-    subject = request_json.get('subject', )
-    body = request_json.get('body', 'Hello from the Gmail API via Python!')
+def send_test_email(request,recipient,body):  
     service = gmail_authenticate()
-    message = create_message(
-        sender='aps@aps.business',
-        to=recipient,
-        subject=subject,
-        message_text=body
-    )
+    message = create_message(sender='aps@aps.business',to=recipient,subject=request,message_text=body)
     send_email(service, 'me', message)
 def convert_datetime_robust_main(dt_str):
     # Handle NaN or missing values
@@ -554,6 +586,15 @@ def process_transaction_datetime(df_filtered):
 
  
 if __name__ == "__main__":
-    download_and_upload_attachments('test')
+
+    config_data = load_xml_config_from_supabase(FILE_PATH)
+    if config_data:
+        bucket_name   = config_data["bucketName"]
+        table_name    = config_data["tableName"]
+        sender        = config_data["sender"]
+        recipient     = config_data["to"]
+        subjectdata   = config_data["subject"]
+        message_text  = config_data["message_text"]
+        download_and_upload_attachments(bucket_name,table_name,sender,recipient,subjectdata,message_text)
 
  
