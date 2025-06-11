@@ -75,11 +75,11 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                         print(num_rows)
                                         if df is not None: 
                                             mailsubject = subjectdata +' started for the '+ filename + ' with rows of ' + str(num_rows)                                           
-                                            #send_test_email(mailsubject,recipient,message_text)
+                                            send_test_email(mailsubject,recipient,message_text)
                                             push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
                                             removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
                                             mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
-                                            #send_test_email(mailsubject,recipient,message_text)
+                                            send_test_email(mailsubject,recipient,message_text)
                                         else:
                                             print("Failed to load CSV from Supabase.")
 
