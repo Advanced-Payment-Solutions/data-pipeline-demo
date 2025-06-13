@@ -24,10 +24,15 @@ import xml.etree.ElementTree as ET
 #BUCKET_NAME = "apsbucket"
 #FILE_PATH = "Configuration/config.xml"
 
-SUPABASE_URL = None
-SUPABASE_KEY = None
-BUCKET_NAME = None
-FILE_PATH = None
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+print('SUPABASE_URL: ' + SUPABASE_URL)
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+print('SUPABASE_KEY: ' + SUPABASE_KEY)
+BUCKET_NAME = os.getenv('BUCKET_NAME')
+print('BUCKET_NAME: ' + BUCKET_NAME)
+FILE_PATH = os.getenv('FILE_PATH')
+print('FILE_PATH: ' + FILE_PATH)
+
 
 tables = {}  
 uploaded_files = []
@@ -591,16 +596,8 @@ def process_transaction_datetime(df_filtered):
     return df_filtered
 
  
-if __name__ == "__main__":
- 
-    SUPABASE_URL = os.getenv('SUPABASE_URL')
-    print('SUPABASE_URL' + SUPABASE_URL)
-    SUPABASE_KEY = os.getenv('SUPABASE_KEY')
-    print('SUPABASE_KEY' + SUPABASE_KEY)
-    BUCKET_NAME = os.getenv('BUCKET_NAME')
-    print('BUCKET_NAME' + BUCKET_NAME)
-    FILE_PATH = os.getenv('FILE_PATH')
-    print('FILE_PATH' + FILE_PATH)
+if __name__ == "__main__": 
+
     config_data = load_xml_config_from_supabase(FILE_PATH)
     if config_data:
         bucket_name   = config_data["bucketName"]
