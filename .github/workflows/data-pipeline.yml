@@ -1,10 +1,5 @@
 name: data-pipeline-workflow
 
-supabase:
-  url: "https://thxvfnachnpgmeottlem.supabase.co"
-  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  bucket: "apsbucket"
-
 on: 
   push:
   workflow_dispatch:
