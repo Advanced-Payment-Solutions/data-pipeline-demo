@@ -75,11 +75,11 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                         print(num_rows)
                                         if df is not None: 
                                             mailsubject = subjectdata +' started for the '+ filename + ' with rows of ' + str(num_rows)                                           
-                                            #send_test_email(mailsubject,recipient,message_text)
+                                            send_test_email(mailsubject,recipient,message_text)
                                             push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
                                             removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
                                             mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
-                                            #send_test_email(mailsubject,recipient,message_text)
+                                            send_test_email(mailsubject,recipient,message_text)
                                         else:
                                             print("Failed to load CSV from Supabase.")
 
@@ -411,15 +411,13 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
             return super().default(obj)
 
     def upload_dataframe_in_chunks(df, table_name, chunk_size=5000):
-    total_rows = len(df)
-    chunks = range(0, total_rows, chunk_size)
-    successful_rows = 0
-    failed_chunks = []
+        total_rows = len(df)
+        chunks = range(0, total_rows, chunk_size)
+        successful_rows = 0
+        failed_chunks = []
 
-    print(f"Uploading {total_rows} rows to {table_name} in chunks of {chunk_size}")
-
-    with tqdm(total=total_rows) as pbar:
-        for i in chunks:
+        with tqdm(total=total_rows) as pbar:
+         for i in chunks:
             end_idx = min(i + chunk_size, total_rows)
             chunk = df.iloc[i:end_idx]
             chunk_records = json.loads(json.dumps(chunk.to_dict('records'), cls=NanHandlingEncoder))
@@ -441,10 +439,7 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
                 failed_chunks.append((i, end_idx))
 
             pbar.update(len(chunk))
-
-    return {"total_rows": total_rows, "successful_rows": successful_rows, "failed_chunks": failed_chunks}
-
-
+        return {"total_rows": total_rows, "successful_rows": successful_rows, "failed_chunks": failed_chunks}  
     # Execute the upload
     #table_name = "Dev_Transaction"
     table_name=ENV_TABLE_NAME
