@@ -1,11 +1,5 @@
 name: data-pipeline-workflow
 
-github:
-  SUPABASE_URL: https://thxvfnachnpgmeottlem.supabase.co
-  SUPABASE_KEY: yJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoeHZmbmFjaG5wZ21lb3R0bGVtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Njg2ODQ1OSwiZXhwIjoyMDYyNDQ0NDU5fQ.TBgZdtH3INLZtpnraa4dfPbZ0hZHLdCoY1VKhqEv8FA
-  BUCKET_NAME: apsbucket
-  FILE_PATH: Configuration/config.xml
-
 on: 
   push:
   workflow_dispatch:
