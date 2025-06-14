@@ -33,7 +33,7 @@ print('FILE_PATH: ' + FILE_PATH)
 tables = {}  
 uploaded_files = []
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-
+EMAIL_STATUS = False
  
 def authenticate_gmail(GMAIL_TOKEN_PATH):
     creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_PATH, ['https://www.googleapis.com/auth/gmail.readonly'])
@@ -70,8 +70,7 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                     print("Row already exists duplicate excution for the same date")
                                  else: 
                                     print("Row does not exist for the date of " + fileprocessdate)
-                                    if filename and 'attachmentId' in body:
-                                        insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog')
+                                    if filename and 'attachmentId' in body:                                        
                                         att_id = body['attachmentId']
                                         attachment = service.users().messages().attachments().get(userId='me', messageId=message['id'], id=att_id).execute()
                                         data = base64.urlsafe_b64decode(attachment['data'].encode('UTF-8')) 
@@ -82,10 +81,13 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                         if df is not None: 
                                             mailsubject = subjectdata +' started for the '+ filename + ' with rows of ' + str(num_rows)                                           
                                             send_test_email(mailsubject,recipient,message_text)
-                                            push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
-                                            removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
-                                            mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
-                                            send_test_email(mailsubject,recipient,message_text)
+                                            if EMAIL_STATUS:                                                
+                                             push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
+                                             insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog')                                             
+                                             removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
+                                             mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
+                                             send_test_email(mailsubject,recipient,message_text)
+                                             EMAIL_STATUS = False
                                         else:
                                             print("Failed to load CSV from Supabase.")
 
@@ -509,15 +511,21 @@ def create_message(sender, to, subject, message_text):
     encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
     return {'raw': encoded_message}
 
-def send_email(service, user_id, message):
-    send_message = service.users().messages().send(userId=user_id, body=message).execute()
-    print(f"Message sent! ID: {send_message['id']}")
-
-
+ 
 def send_test_email(request,recipient,body):  
-    service = gmail_authenticate()
-    message = create_message(sender='aps@aps.business',to=recipient,subject=request,message_text=body)
-    send_email(service, 'me', message)
+    global EMAIL_STATUS
+    try:
+            service = gmail_authenticate()
+            message = create_message(sender='aps@aps.business',to=recipient,subject=request,message_text=body)   
+            send_message = service.users().messages().send(userId='me', body=message).execute()
+            print(f"Message sent! ID: {send_message['id']}")
+            EMAIL_STATUS = True
+            return True
+    except Exception as e:
+            print(f"❌ Failed to send email: {str(e)}")
+            EMAIL_STATUS = False
+            return False
+
 def convert_datetime_robust_main(dt_str):
     # Handle NaN or missing values
     if pd.isna(dt_str) or str(dt_str).lower() == 'nan':
