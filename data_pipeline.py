@@ -36,9 +36,37 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 EMAIL_STATUS = False
  
 def authenticate_gmail(GMAIL_TOKEN_PATH):
-    creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_PATH, ['https://www.googleapis.com/auth/gmail.readonly'])
-    service = build('gmail', 'v1', credentials=creds) 
+    creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_PATH, [
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.modify',
+    ])
+
+    if creds and creds.expired and creds.refresh_token:
+        print("Access token expired. Refreshing...")
+        creds.refresh(Request())
+
+        # Save the refreshed token back to the file
+        with open(GMAIL_TOKEN_PATH, 'w') as token_file:
+            token_file.write(creds.to_json())
+        print("Access token refreshed and saved locally.")
+
+        # Upload refreshed token back to Supabase
+        try:
+            with open(GMAIL_TOKEN_PATH, 'r') as refreshed_file:
+                refreshed_token_data = refreshed_file.read()  # raw JSON string
+
+            supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+            response = supabase.storage.from_(BUCKET_NAME).update(
+                'Credentials/token.json',
+                refreshed_token_data.encode('utf-8')
+            )
+            print("✅ Refreshed token uploaded to Supabase.")
+        except Exception as e:
+            print(f"⚠️ Failed to upload refreshed token to Supabase: {e}")
+
+    service = build('gmail', 'v1', credentials=creds)
     return service
+
 
 ######################################################################
 
@@ -80,13 +108,13 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                         print(num_rows)
                                         if df is not None: 
                                             mailsubject = subjectdata +' started for the '+ filename + ' with rows of ' + str(num_rows)                                           
-                                            send_test_email(mailsubject,recipient,message_text)
+                                            #send_test_email(mailsubject,recipient,message_text)
                                             if EMAIL_STATUS:                                                
                                              push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
                                              insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog')                                             
                                              removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
                                              mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
-                                             send_test_email(mailsubject,recipient,message_text)
+                                             #send_test_email(mailsubject,recipient,message_text)
                                              EMAIL_STATUS = False
                                         else:
                                             print("Failed to load CSV from Supabase.")
