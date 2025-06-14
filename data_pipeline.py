@@ -29,6 +29,15 @@ BUCKET_NAME = os.getenv('BUCKET_NAME')
 print('BUCKET_NAME: ' + BUCKET_NAME)
 FILE_PATH = os.getenv('FILE_PATH')
 print('FILE_PATH: ' + FILE_PATH)
+REFRESH_TOKEN = os.getenv('REFRESH_TOKEN')
+print('REFRESH_TOKEN: ' + REFRESH_TOKEN)
+CLIENT_ID = os.getenv('CLIENT_ID')
+print('CLIENT_ID: ' + CLIENT_ID)
+CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+print('CLIENT_SECRET: ' + CLIENT_SECRET)
+TOKEN_URI = os.getenv('TOKEN_URI')
+print('TOKEN_URI: ' + TOKEN_URI)
+
 
 
 #SUPABASE_URL= "https://thxvfnachnpgmeottlem.supabase.co"
@@ -46,11 +55,7 @@ print('FILE_PATH: ' + FILE_PATH)
 #        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
 #        "client_secret": "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",
 #        "redirect_uris": ["http://localhost"]
-#    }}
-
-CLIENT_ID = "1096839893158-m2aosmj5oroum4soa9q1aj67l9tq9m74.apps.googleusercontent.com"
-CLIENT_SECRET = "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"
-TOKEN_URI = "https://oauth2.googleapis.com/token"
+#    }} 
 
 tables = {}  
 uploaded_files = []
