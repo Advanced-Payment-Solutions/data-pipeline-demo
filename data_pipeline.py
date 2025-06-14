@@ -44,7 +44,7 @@ def authenticate_gmail(GMAIL_TOKEN_PATH):
 
 def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subjectdata,message_text):
 
- 
+    global EMAIL_STATUS
     token_data = load_json_from_supabase(BUCKET_NAME, 'Credentials/token.json', SUPABASE_URL, SUPABASE_KEY)
     if not token_data:
         print("Failed to load Gmail token from Supabase.")
