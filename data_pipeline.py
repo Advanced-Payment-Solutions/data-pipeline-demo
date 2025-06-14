@@ -68,13 +68,13 @@ SCOPES = [
 ]
 
 def authenticate_gmail(GMAIL_TOKEN_PATH):
-    refresh_token = os.environ.get("REFRESH_TOKEN")
+    refresh_token = REFRESH_TOKEN
     if not refresh_token:
         raise Exception("Missing REFRESH_TOKEN in environment variables")
 
     creds = Credentials(
         token=None,  # no access token yet
-        refresh_token='1//0gqC0VG2Y-k7bCgYIARAAGBASNwF-L9IrRl9l5XlRt7ftwBQfy4XX86wx5m4yLCM_18tMkNy25uJk6P_wtF3KOa1liVdlak_Amt0',
+        refresh_token=refresh_token,
         token_uri=TOKEN_URI,
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
@@ -128,13 +128,13 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                         print(num_rows)
                                         if df is not None: 
                                             mailsubject = subjectdata +' started for the '+ filename + ' with rows of ' + str(num_rows)                                           
-                                            #send_test_email(mailsubject,recipient,message_text)
+                                            send_test_email(mailsubject,recipient,message_text)
                                             if EMAIL_STATUS:                                                
                                              push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
                                              insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog')                                             
                                              removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
                                              mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
-                                             #send_test_email(mailsubject,recipient,message_text)
+                                             send_test_email(mailsubject,recipient,message_text)
                                              EMAIL_STATUS = False
                                         else:
                                             print("Failed to load CSV from Supabase.")
@@ -536,18 +536,38 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
 #####################        EMAIL SEND    ###########################
  
 def gmail_authenticate():
-    token_data = load_json_from_supabase(BUCKET_NAME, 'Credentials/SendMailToken/data_SendMailToken_token.json', SUPABASE_URL, SUPABASE_KEY)
-    if not token_data:
-        print("Failed to load Gmail token from Supabase.")
-        return
-    with tempfile.NamedTemporaryFile(mode='w+', suffix='.json', delete=False) as tmp:
-        json.dump(token_data, tmp)
-        tmp.flush()
+    refresh_token = REFRESH_TOKEN
+    if not refresh_token:
+        raise Exception("Missing REFRESH_TOKEN in environment variables")
+
+    creds = Credentials(
+        token=None,  # no access token yet
+        refresh_token=refresh_token,
+        token_uri=TOKEN_URI,
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        scopes=SCOPES
+    )
+
+    # Use the refresh token to get a fresh access token
+    creds.refresh(Request())
+
+    # Build and return the Gmail API client
+    service = build('gmail', 'v1', credentials=creds)
+    return service
+
+    #token_data = load_json_from_supabase(BUCKET_NAME, 'Credentials/SendMailToken/data_SendMailToken_token.json', SUPABASE_URL, SUPABASE_KEY)
+    #if not token_data:
+        #print("Failed to load Gmail token from Supabase.")
+        #return
+    #with tempfile.NamedTemporaryFile(mode='w+', suffix='.json', delete=False) as tmp:
+        #json.dump(token_data, tmp)
+        #tmp.flush()
     ##creds_info= load_json_from_supabase(BUCKET_NAME, 'Credentials/SendMailToken/token.json', SUPABASE_URL, SUPABASE_KEY)
-    creds = Credentials.from_authorized_user_info(info=token_data, scopes=SCOPES)
-    if not creds.valid and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-    return build('gmail', 'v1', credentials=creds)
+    #creds = Credentials.from_authorized_user_info(info=token_data, scopes=SCOPES)
+    #if not creds.valid and creds.expired and creds.refresh_token:
+        #creds.refresh(Request())
+    #return build('gmail', 'v1', credentials=creds)
 
 def create_message(sender, to, subject, message_text):
     message = EmailMessage()
