@@ -37,16 +37,20 @@ print('FILE_PATH: ' + FILE_PATH)
 #FILE_PATH ="Configuration/config.xml"
 
 # Hardcoded credentials (client_id and client_secret)
-client_config = {
-    "installed": {
-        "client_id": "1096839893158-m2aosmj5oroum4soa9q1aj67l9tq9m74.apps.googleusercontent.com",
-        "project_id": "database-459719",
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_secret": "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",
-        "redirect_uris": ["http://localhost"]
-    }}
+#client_config = {
+#    "installed": {
+#        "client_id": "1096839893158-m2aosmj5oroum4soa9q1aj67l9tq9m74.apps.googleusercontent.com",
+#        "project_id": "database-459719",
+#        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+#        "token_uri": "https://oauth2.googleapis.com/token",
+#        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+#        "client_secret": "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",
+#        "redirect_uris": ["http://localhost"]
+#    }}
+
+CLIENT_ID = "1096839893158-m2aosmj5oroum4soa9q1aj67l9tq9m74.apps.googleusercontent.com"
+CLIENT_SECRET = "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"
+TOKEN_URI = "https://oauth2.googleapis.com/token"
 
 tables = {}  
 uploaded_files = []
@@ -59,15 +63,23 @@ SCOPES = [
 ]
 
 def authenticate_gmail(GMAIL_TOKEN_PATH):
-         # Use the hardcoded config to launch OAuth flow
-    flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
-    creds = flow.run_local_server(port=0)  # Opens browser for login
+    refresh_token = os.environ.get("REFRESH_TOKEN")
+    if not refresh_token:
+        raise Exception("Missing REFRESH_TOKEN in environment variables")
 
-    # Refresh if needed (not likely right after login)
-    if creds.expired and creds.refresh_token:
-        creds.refresh(Request())
+    creds = Credentials(
+        token=None,  # no access token yet
+        refresh_token=refresh_token,
+        token_uri=TOKEN_URI,
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        scopes=SCOPES
+    )
 
-    # Build and return the Gmail API service
+    # Use the refresh token to get a fresh access token
+    creds.refresh(Request())
+
+    # Build and return the Gmail API client
     service = build('gmail', 'v1', credentials=creds)
     return service
 
