@@ -15,6 +15,7 @@ from tqdm import tqdm
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 from supabase import create_client, Client
 import xml.etree.ElementTree as ET
@@ -30,43 +31,45 @@ FILE_PATH = os.getenv('FILE_PATH')
 print('FILE_PATH: ' + FILE_PATH)
 
 
+#SUPABASE_URL= "https://thxvfnachnpgmeottlem.supabase.co"
+#SUPABASE_KEY= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoeHZmbmFjaG5wZ21lb3R0bGVtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Njg2ODQ1OSwiZXhwIjoyMDYyNDQ0NDU5fQ.TBgZdtH3INLZtpnraa4dfPbZ0hZHLdCoY1VKhqEv8FA"
+#BUCKET_NAME = "apsbucket"
+#FILE_PATH ="Configuration/config.xml"
+
+# Hardcoded credentials (client_id and client_secret)
+client_config = {
+    "installed": {
+        "client_id": "1096839893158-m2aosmj5oroum4soa9q1aj67l9tq9m74.apps.googleusercontent.com",
+        "project_id": "database-459719",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_secret": "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",
+        "redirect_uris": ["http://localhost"]
+    }}
+
 tables = {}  
 uploaded_files = []
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 EMAIL_STATUS = False
- 
-def authenticate_gmail(GMAIL_TOKEN_PATH):
-    creds = Credentials.from_authorized_user_file(GMAIL_TOKEN_PATH, [
-        'https://www.googleapis.com/auth/gmail.readonly',
-        'https://www.googleapis.com/auth/gmail.modify',
-    ])
 
-    if creds and creds.expired and creds.refresh_token:
-        print("Access token expired. Refreshing...")
+SCOPES = [
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.modify',
+]
+
+def authenticate_gmail(GMAIL_TOKEN_PATH):
+         # Use the hardcoded config to launch OAuth flow
+    flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+    creds = flow.run_local_server(port=0)  # Opens browser for login
+
+    # Refresh if needed (not likely right after login)
+    if creds.expired and creds.refresh_token:
         creds.refresh(Request())
 
-        # Save the refreshed token back to the file
-        with open(GMAIL_TOKEN_PATH, 'w') as token_file:
-            token_file.write(creds.to_json())
-        print("Access token refreshed and saved locally.")
-
-        # Upload refreshed token back to Supabase
-        try:
-            with open(GMAIL_TOKEN_PATH, 'r') as refreshed_file:
-                refreshed_token_data = refreshed_file.read()  # raw JSON string
-
-            supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-            response = supabase.storage.from_(BUCKET_NAME).update(
-                'Credentials/token.json',
-                refreshed_token_data.encode('utf-8')
-            )
-            print("✅ Refreshed token uploaded to Supabase.")
-        except Exception as e:
-            print(f"⚠️ Failed to upload refreshed token to Supabase: {e}")
-
+    # Build and return the Gmail API service
     service = build('gmail', 'v1', credentials=creds)
     return service
-
 
 ######################################################################
 
