@@ -19,11 +19,6 @@ from googleapiclient.discovery import build
 from supabase import create_client, Client
 import xml.etree.ElementTree as ET
 
-#SUPABASE_URL = "https://thxvfnachnpgmeottlem.supabase.co"
-#SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoeHZmbmFjaG5wZ21lb3R0bGVtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Njg2ODQ1OSwiZXhwIjoyMDYyNDQ0NDU5fQ.TBgZdtH3INLZtpnraa4dfPbZ0hZHLdCoY1VKhqEv8FA'
-#BUCKET_NAME = "apsbucket"
-FILE_PATH = "Configuration/config.xml"
-
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 print('SUPABASE_URL: ' + SUPABASE_URL)
