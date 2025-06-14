@@ -69,7 +69,7 @@ def authenticate_gmail(GMAIL_TOKEN_PATH):
 
     creds = Credentials(
         token=None,  # no access token yet
-        refresh_token=refresh_token,
+        refresh_token='1//0gqC0VG2Y-k7bCgYIARAAGBASNwF-L9IrRl9l5XlRt7ftwBQfy4XX86wx5m4yLCM_18tMkNy25uJk6P_wtF3KOa1liVdlak_Amt0',
         token_uri=TOKEN_URI,
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
