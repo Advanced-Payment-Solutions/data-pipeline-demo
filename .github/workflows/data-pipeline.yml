@@ -4,7 +4,7 @@ on:
   push:
   workflow_dispatch:
   schedule:
-      - cron: '30 6 * * *'
+     - cron: "30 11 * * *"
 
 jobs:
   run-data-pipeline:
@@ -14,10 +14,12 @@ jobs:
       SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRoeHZmbmFjaG5wZ21lb3R0bGVtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Njg2ODQ1OSwiZXhwIjoyMDYyNDQ0NDU5fQ.TBgZdtH3INLZtpnraa4dfPbZ0hZHLdCoY1VKhqEv8FA"
       BUCKET_NAME: "apsbucket"
       FILE_PATH: "Configuration/config.xml"
+      REFRESH_TOKEN: "1//0gqC0VG2Y-k7bCgYIARAAGBASNwF-L9IrRl9l5XlRt7ftwBQfy4XX86wx5m4yLCM_18tMkNy25uJk6P_wtF3KOa1liVdlak_Amt0"
+      CLIENT_ID: "1096839893158-m2aosmj5oroum4soa9q1aj67l9tq9m74.apps.googleusercontent.com"
+      CLIENT_SECRET: "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"
+      TOKEN_URI: "https://oauth2.googleapis.com/token" 
+
     steps:
-      - name: Show current time
-        run: date
-        
       - name: Checkout repo content
         uses: actions/checkout@v4
         with:
