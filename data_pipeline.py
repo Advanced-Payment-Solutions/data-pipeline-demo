@@ -212,7 +212,7 @@ def check_row_exists(supabase_url: str, supabase_key: str, table_name: str,  dat
         return False
 
                                         
-def insert_file_record(supabase_url: str, supabase_key: str, filename: str, date_str: str,table_name:str,num_rows:str,"subject": subject):
+def insert_file_record(supabase_url: str, supabase_key: str, filename: str, date_str: str,table_name:str,num_rows:str,subject:str):
   
     try:
         supabase: Client = create_client(supabase_url, supabase_key)
