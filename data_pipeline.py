@@ -210,13 +210,14 @@ def check_row_exists(supabase_url: str, supabase_key: str, table_name: str,  dat
         return False
 
                                         
-def insert_file_record(supabase_url: str, supabase_key: str, filename: str, date_str: str,table_name:str):
+def insert_file_record(supabase_url: str, supabase_key: str, filename: str, date_str: str,table_name:str,num_rows:str):
   
     try:
         supabase: Client = create_client(supabase_url, supabase_key)
         data = {
             "filename": filename,
-            "filedate": date_str
+            "filedate": date_str,
+            "num_rows": num_rows
         }
         response = supabase.table(table_name).insert(data).execute()
         # ✅ Check if data was returned (insertion success)
