@@ -131,7 +131,7 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                             send_test_email(mailsubject,recipient,message_text)
                                             if EMAIL_STATUS:                                                
                                              push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
-                                             insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog')                                             
+                                             insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog',num_rows)                                             
                                              removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
                                              mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
                                              send_test_email(mailsubject,recipient,message_text)
