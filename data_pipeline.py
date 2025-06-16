@@ -110,6 +110,8 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
         removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)        
         for message in messages:
                                 msg = service.users().messages().get(userId='me', id=message['id']).execute()
+                                headers = msg['payload'].get('headers', [])
+                                subject = next((header['value'] for header in headers if header['name'] == 'Subject'), '(No Subject)')
                                 for part in msg['payload'].get('parts', []):
                                  filename = part.get("filename") 
                                  body = part.get("body", {})                                 
@@ -131,7 +133,7 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                             send_test_email(mailsubject,recipient,message_text)
                                             if EMAIL_STATUS:                                                
                                              push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
-                                             insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog',num_rows)                                             
+                                             insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog',num_rows,subject)                                             
                                              removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
                                              mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
                                              send_test_email(mailsubject,recipient,message_text)
@@ -210,14 +212,15 @@ def check_row_exists(supabase_url: str, supabase_key: str, table_name: str,  dat
         return False
 
                                         
-def insert_file_record(supabase_url: str, supabase_key: str, filename: str, date_str: str,table_name:str,num_rows:str):
+def insert_file_record(supabase_url: str, supabase_key: str, filename: str, date_str: str,table_name:str,num_rows:str,"subject": subject):
   
     try:
         supabase: Client = create_client(supabase_url, supabase_key)
         data = {
             "filename": filename,
             "filedate": date_str,
-            "num_rows": num_rows
+            "num_rows": num_rows,
+            "subject": subject
         }
         response = supabase.table(table_name).insert(data).execute()
         # ✅ Check if data was returned (insertion success)
