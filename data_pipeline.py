@@ -20,6 +20,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from supabase import create_client, Client
 import xml.etree.ElementTree as ET
 
+from bs4 import BeautifulSoup
+import html
 
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 print('SUPABASE_URL: ' + SUPABASE_URL)
@@ -114,7 +116,14 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                 subject = next((header['value'] for header in headers if header['name'] == 'Subject'), '(No Subject)')
                                 for part in msg['payload'].get('parts', []):
                                  filename = part.get("filename") 
-                                 body = part.get("body", {})                                 
+                                 body = part.get("body", {})       
+                                 mime_type = part.get("mimeType", "")
+                                 data = body.get("data")
+                                 if mime_type == "text/html":
+                                    from base64 import urlsafe_b64decode 
+                                    decoded_body = urlsafe_b64decode(data).decode("utf-8")
+                                    plain_text = extract_inner_text(decoded_body)
+                                    print("Extracted text:\n", plain_text)   
                                  exists = check_row_exists(supabase_url=SUPABASE_URL,supabase_key=SUPABASE_KEY,table_name="TransactionLog", date_column="filedate",date_value=fileprocessdate,filename_column="filename",filename_value=filename)
                                  if exists:
                                     print("Row already exists duplicate excution for the same date")
@@ -130,17 +139,23 @@ def download_and_upload_attachments(bucket_name,table_name,sender,recipient,subj
                                         print(num_rows)
                                         if df is not None: 
                                             mailsubject = subjectdata +' started for the '+ filename + ' with rows of ' + str(num_rows)                                           
-                                            send_test_email(mailsubject,recipient,message_text)
+                                            #send_test_email(mailsubject,recipient,message_text)
                                             if EMAIL_STATUS:                                                
                                              push_data_supabase_database(df,SUPABASE_URL,SUPABASE_KEY,table_name)
-                                             insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog',num_rows,subject)                                             
+                                             insert_file_record(SUPABASE_URL,SUPABASE_KEY,filename,fileprocessdate,'TransactionLog',num_rows,plain_text)                                             
                                              removeexistingfiles(BUCKET_NAME,SUPABASE_URL,SUPABASE_KEY)
                                              mailsubject = subjectdata +' completed for the '+ filename + ' with rows of ' + str(num_rows)
-                                             send_test_email(mailsubject,recipient,message_text)
+                                             #send_test_email(mailsubject,recipient,message_text)
                                              EMAIL_STATUS = False
                                         else:
                                             print("Failed to load CSV from Supabase.")
-
+def extract_inner_text(html_content):
+    # Decode HTML entities
+    decoded = html.unescape(html_content)    
+    # Use BeautifulSoup to strip HTML tags
+    soup = BeautifulSoup(decoded, "html.parser")
+    return soup.get_text(separator="\n").strip()
+    
 def load_xml_config_from_supabase(FILE_PATH):
     try:
         # Initialize Supabase client
