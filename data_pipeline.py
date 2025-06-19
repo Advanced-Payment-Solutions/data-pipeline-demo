@@ -496,58 +496,67 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
                 return obj.isoformat()
             return super().default(obj)
 
+ 
+
     def upload_dataframe_in_chunks(df, table_name, chunk_size=5000):
         total_rows = len(df)
         chunks = range(0, total_rows, chunk_size)
         successful_rows = 0
         failed_chunks = []
 
-        with tqdm(total=total_rows) as pbar:
-         for i in chunks:
-            end_idx = min(i + chunk_size, total_rows)
-            chunk = df.iloc[i:end_idx]
-            chunk_records = json.loads(json.dumps(chunk.to_dict('records'), cls=NanHandlingEncoder))
+        with tqdm(total=total_rows, desc=f"Uploading to {table_name}") as pbar:
+            for i in chunks:
+                end_idx = min(i + chunk_size, total_rows)
+                chunk = df.iloc[i:end_idx]
+                chunk_records = json.loads(json.dumps(chunk.to_dict('records'), cls=NanHandlingEncoder))
 
-            try:
-                response = supabase.table(table_name).insert(chunk_records).execute()
+                try:
+                    response = supabase.table(table_name).insert(chunk_records).execute()
 
-                # Check if the response contains data or was successful
-                if hasattr(response, 'data') and response.data:
-                    successful_rows += len(response.data)
-                    print(f"✅ Successfully uploaded chunk {i} to {end_idx - 1}")
-                elif hasattr(response, 'error') and response.error:
-                    raise Exception(response.error)
-                else:
-                    print(f"⚠️ No error but no data returned — assuming success")
-                    successful_rows += len(chunk_records)
-            except Exception as e:
-                print(f"❌ Error uploading chunk {i} to {end_idx - 1}: {e}")
-                failed_chunks.append((i, end_idx))
+                    if hasattr(response, 'data') and response.data:
+                        successful_rows += len(response.data)
+                        print(f"✅ Successfully uploaded chunk {i} to {end_idx - 1}")
+                    elif hasattr(response, 'error') and response.error:
+                        raise Exception(response.error)
+                    else:
+                        print(f"⚠️ No error but no data returned — assuming success")
+                        successful_rows += len(chunk_records)
+                except Exception as e:
+                    print(f"❌ Error uploading chunk {i} to {end_idx - 1}: {e}")
+                    failed_chunks.append((i, end_idx))
 
-            pbar.update(len(chunk))
-        return {"total_rows": total_rows, "successful_rows": successful_rows, "failed_chunks": failed_chunks}  
-    # Execute the upload
-    #table_name = "Dev_Transaction"
-    table_name=ENV_TABLE_NAME
+                pbar.update(len(chunk))
+
+        return {
+            "total_rows": total_rows,
+            "successful_rows": successful_rows,
+            "failed_chunks": failed_chunks
+        }
+
+    # --- MAIN EXECUTION STARTS HERE ---
+
+    # Example: table_name = "Dev_Transaction"
+    table_name = ENV_TABLE_NAME
     result = upload_dataframe_in_chunks(df_filtered, table_name, chunk_size=5000)
 
-    # Retry failed chunks with smaller chunk size and collect permanently failed data
+    # Retry failed chunks with smaller chunk size
     permanently_failed_data = []
 
     if result['failed_chunks']:
-        print("Retrying failed chunks with smaller chunk size...")
+        print("🔁 Retrying failed chunks with smaller chunk size (1000)...")
+
         for start_idx, end_idx in result['failed_chunks']:
             failed_chunk = df_filtered.iloc[start_idx:end_idx]
-            retry_result = upload_dataframe_in_chunks(failed_chunk, 'temp_LivePayment_Transactions', chunk_size=5000)
-            print(f"Retry result: {retry_result['successful_rows']} of {retry_result['total_rows']} rows uploaded successfully")
-            
-            # If there are still failed chunks after retry, collect the data
+
+            # Retry with smaller chunk size
+            retry_result = upload_dataframe_in_chunks(failed_chunk, table_name, chunk_size=1000)
+
+            print(f"🔁 Retry result: {retry_result['successful_rows']} of {retry_result['total_rows']} rows uploaded")
+
+            # If retry still has failed chunks, collect those rows
             if retry_result['failed_chunks']:
                 for retry_start, retry_end in retry_result['failed_chunks']:
-                    # Calculate actual indices in the original dataframe
-                    actual_start = start_idx + retry_start
-                    actual_end = start_idx + retry_end
-                    permanently_failed_chunk = df_filtered.iloc[actual_start:actual_end]
+                    permanently_failed_chunk = failed_chunk.iloc[retry_start:retry_end]
                     permanently_failed_data.append(permanently_failed_chunk)
 
     # Save permanently failed data to CSV
@@ -556,11 +565,9 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         failed_filename = f"failed_upload_data_{table_name}_{timestamp}.csv"
         permanently_failed_df.to_csv(failed_filename, index=False)
-        print(f"⚠️ {len(permanently_failed_df)} rows failed permanently and saved to: {failed_filename}")
+        print(f"⚠️ {len(permanently_failed_df)} rows permanently failed and saved to: {failed_filename}")
     else:
-        print("✅ All chunks uploaded successfully!")
-    
-
+        print("✅ All rows uploaded successfully after retries.")
 
 
 #####################        EMAIL SEND    ###########################
@@ -615,8 +622,8 @@ def send_test_email(request,recipient,body):
     try:
             service = gmail_authenticate()
             message = create_message(sender='aps@aps.business',to=recipient,subject=request,message_text=body)   
-            send_message = service.users().messages().send(userId='me', body=message).execute()
-            print(f"Message sent! ID: {send_message['id']}")
+            #send_message = service.users().messages().send(userId='me', body=message).execute()
+            #print(f"Message sent! ID: {send_message['id']}")
             EMAIL_STATUS = True
             return True
     except Exception as e:
