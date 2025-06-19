@@ -511,7 +511,7 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
                 chunk_records = json.loads(json.dumps(chunk.to_dict('records'), cls=NanHandlingEncoder))
 
                 try:
-                    response = supabase.table(table_name).insert(chunk_records).execute()
+                    response = supabase.table(table_name).insert(chunk_records,on_conflict="id").execute()
 
                     if hasattr(response, 'data') and response.data:
                         successful_rows += len(response.data)
