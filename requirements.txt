@@ -10,3 +10,6 @@ supabase==2.0.0
 functions-framework==3.5.0
 numpy==1.26.4
 tqdm==4.66.3
+beautifulsoup4==4.12.2
+html5lib==1.1
+
