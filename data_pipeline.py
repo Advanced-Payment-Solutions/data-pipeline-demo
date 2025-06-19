@@ -70,6 +70,8 @@ print('TOKEN_URI: ' + TOKEN_URI)
 #        "redirect_uris": ["http://localhost"]
 #    }} 
 
+
+SOURCE_TABLE = "temp_LivePayment_Transactions" 
 tables = {}  
 uploaded_files = []
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
@@ -536,19 +538,17 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
 
     if result['failed_chunks']:
         print("Retrying failed chunks with smaller chunk size...")
-        for start_idx, end_idx in result['failed_chunks']:
-            failed_chunk = df_filtered.iloc[start_idx:end_idx]
-            retry_result = upload_dataframe_in_chunks(failed_chunk, table_name, chunk_size=5000)
-            print(f"Retry result: {retry_result['successful_rows']} of {retry_result['total_rows']} rows uploaded successfully")
-            
-            # If there are still failed chunks after retry, collect the data
-            if retry_result['failed_chunks']:
-                for retry_start, retry_end in retry_result['failed_chunks']:
-                    # Calculate actual indices in the original dataframe
-                    actual_start = start_idx + retry_start
-                    actual_end = start_idx + retry_end
-                    permanently_failed_chunk = df_filtered.iloc[actual_start:actual_end]
-                    permanently_failed_data.append(permanently_failed_chunk)
+        response = supabase.table(ENV_TABLE_NAME).delete().execute()
+        print("Deleted all rows:", response)
+        config_data = load_xml_config_from_supabase(FILE_PATH)
+        if config_data:
+            bucket_name   = config_data["bucketName"]
+            table_name    = config_data["tableName"]
+            sender        = config_data["sender"]
+            recipient     = config_data["to"]
+            subjectdata   = config_data["subject"]
+            message_text  = config_data["message_text"]
+            download_and_upload_attachments(bucket_name,table_name,sender,recipient,subjectdata,message_text)        
 
     # Save permanently failed data to CSV
     if permanently_failed_data:
@@ -558,7 +558,37 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
         permanently_failed_df.to_csv(failed_filename, index=False)
         print(f"⚠️ {len(permanently_failed_df)} rows failed permanently and saved to: {failed_filename}")
     else:
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        # Config
+        COLUMNS_TO_EXCLUDE = ["id", "created_at"]  # columns you want to skip
+        # Step 1: Load all data (with pagination)
+        all_rows = []
+        batch_size = 1000
+        offset = 0
+        while True:
+            response = supabase.table(SOURCE_TABLE).select("*").range(offset, offset + batch_size - 1).execute()
+            if not response.data:
+                break
+            all_rows.extend(response.data)
+            offset += batch_size
+        # Step 2: Remove unwanted columns
+        filtered_rows = []
+        for row in all_rows:
+            filtered_row = {key: value for key, value in row.items() if key not in COLUMNS_TO_EXCLUDE}
+            filtered_rows.append(filtered_row)
+        # Step 3: Insert filtered data into destination table (in batches if needed)
+        if filtered_rows:
+            insert_response = supabase.table(ENV_TABLE_NAME).insert(filtered_rows).execute()
+            if insert_response.data:
+                print("Data moved successfully.")  
+            elif insert_response.error:
+                print("Insert failed with error:", insert_response.error)
+            else:
+                print("Insert returned no data and no error. Check Supabase permissions or data format.")
+        else:
+            print("No data to move.")
         print("✅ All chunks uploaded successfully!")
+
     
 
 
@@ -615,8 +645,8 @@ def send_test_email(request,recipient,body):
     try:
             service = gmail_authenticate()
             message = create_message(sender='aps@aps.business',to=recipient,subject=request,message_text=body)   
-            send_message = service.users().messages().send(userId='me', body=message).execute()
-            print(f"Message sent! ID: {send_message['id']}")
+            #send_message = service.users().messages().send(userId='me', body=message).execute()
+            #print(f"Message sent! ID: {send_message['id']}")
             EMAIL_STATUS = True
             return True
     except Exception as e:
