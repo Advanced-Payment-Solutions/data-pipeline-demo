@@ -527,7 +527,7 @@ def push_data_supabase_database(data_list,SUPABASE_URL,SUPABASE_KEY,ENV_TABLE_NA
         print("Retrying failed chunks with smaller chunk size...")
         for start_idx, end_idx in result['failed_chunks']:
             failed_chunk = df_filtered.iloc[start_idx:end_idx]
-            retry_result = upload_dataframe_in_chunks(failed_chunk, table_name, chunk_size=10000)
+            retry_result = upload_dataframe_in_chunks(failed_chunk, table_name, chunk_size=5000)
             print(f"Retry result: {retry_result['successful_rows']} of {retry_result['total_rows']} rows uploaded successfully")
             
             # If there are still failed chunks after retry, collect the data
