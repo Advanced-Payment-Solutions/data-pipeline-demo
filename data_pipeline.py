@@ -624,8 +624,8 @@ def send_test_email(request,recipient,body):
     try:
             service = gmail_authenticate()
             message = create_message(sender='aps@aps.business',to=recipient,subject=request,message_text=body)   
-            #send_message = service.users().messages().send(userId='me', body=message).execute()
-            #print(f"Message sent! ID: {send_message['id']}")
+            send_message = service.users().messages().send(userId='me', body=message).execute()
+            print(f"Message sent! ID: {send_message['id']}")
             EMAIL_STATUS = True
             return True
     except Exception as e:
